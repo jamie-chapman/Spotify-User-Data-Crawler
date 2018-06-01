@@ -16,6 +16,7 @@ querystring
 cookieparser
 chalk
 FileReader
+fs
 
 Use "node install modulenames" to install them.
 
