@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Spotify Music Data Crawler</title>
+    <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <style type="text/css">
+      * {
+      	font-family: Helvetica Neue, Helvetica, Arial
+      }
+      #login, #loggedin {
+        display: none;
+      }
+      .text-overflow {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 500px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div style="padding-left: 140px;" id="login">
+        <h1 style="text-decoration: underline;">Spotify Music Data Crawler</h1>
+       	<h3>Steps:</h3>
+       	<p>1. Click login button below to enter your Spotify details (the app should work with both free and premium accounts).</p>
+       	<p>2. Following a successful login, you should be prompted to grant permission for the app to access your data.</p>
+       	<p>3. You will be taken to another page confirming your submission to the app. And that is all!<br/><br/></p>
+       	<h1 style="color: red">Due to an unforseen error, you might be taken to a page that says "Index Of" this still means your submission was successful so don't worry</h1>
+        <a style="margin-left: 200px; text-align: center; border-radius: 40px; width: 500px; background-color:#1DB954; border-color:#1DB954;" href="/login" class="btn btn-primary">Log in with Spotify</a>
+        <h3>Disclaimer</h3>
+        <p>- Granting permission to this app allows it to read, but not modify your music data. <br/> - Personal details such as your password and billing address cannot be accessed in any way. <br/> - The data that WILL be accessed includes saved playlists, albums and individual songs, as well as your top 50 artists. <br/> - The app will only be permitted to read your data for 1 hour after a login, and any changes made to the scope of the access permissions will require another conformation by you (N.B. No plans are currently being made to change the permissions).</p>
+        <h2 style="color: red">Thank you very much for your time and effort! - Jamie.</h2>
+      </div>
+      <div id="loggedin">
+        <div id="user-profile">
+        </div>
+        <div id="oauth">
+        </div>
+      </div>
+    </div>
+
+
+    <script id="user-profile-template" type="text/x-handlebars-template">
+      <h1> All done! Thanks again. </h1>
+      <p> For any errors found or more information please feel free to e-mail: eeu461@bangor.ac.uk </p>
+    </script>
+
+    <script id="oauth-template" type="text/x-handlebars-template">
+      <h2>oAuth info</h2>
+      <dl class="dl-horizontal">
+        <dt>Access token</dt><dd class="text-overflow">{{access_token}}</dd>
+        <dt>Refresh token</dt><dd class="text-overflow">{{refresh_token}}</dd>
+      </dl>
+    </script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script>
+      (function() {
+
+        /**
+         * Obtains parameters from the hash of the URL
+         * @return Object
+         */
+        function getHashParams() {
+          var hashParams = {};
+          var e, r = /([^&;=]+)=?([^&;]*)/g,
+              q = window.location.hash.substring(1);
+          while ( e = r.exec(q)) {
+             hashParams[e[1]] = decodeURIComponent(e[2]);
+          }
+          return hashParams;
+        }
+
+        var userProfileSource = document.getElementById('user-profile-template').innerHTML,
+            userProfileTemplate = Handlebars.compile(userProfileSource),
+            userProfilePlaceholder = document.getElementById('user-profile');
+
+        var oauthSource = document.getElementById('oauth-template').innerHTML,
+            oauthTemplate = Handlebars.compile(oauthSource),
+            oauthPlaceholder = document.getElementById('oauth');
+
+        var params = getHashParams();
+
+        var access_token = params.access_token,
+            refresh_token = params.refresh_token,
+            error = params.error;
+
+        if (error) {
+          alert('There was an error during the authentication');
+        } else {
+          if (access_token) {
+            // render oauth info
+            oauthPlaceholder.innerHTML = oauthTemplate({
+              access_token: access_token,
+              refresh_token: refresh_token
+            });
+
+            $.ajax({
+                url: 'https://api.spotify.com/v1/me',
+                headers: {
+                  'Authorization': 'Bearer ' + access_token
+                },
+                success: function(response) {
+                  userProfilePlaceholder.innerHTML = userProfileTemplate(response);
+
+                  $('#login').hide();
+                  $('#loggedin').show();
+                }
+            });
+          } else {
+              // render initial screen
+              $('#login').show();
+              $('#loggedin').hide();
+          }
+
+          document.getElementById('obtain-new-token').addEventListener('click', function() {
+            $.ajax({
+              url: '/refresh_token',
+              data: {
+                'refresh_token': refresh_token
+              }
+            }).done(function(data) {
+              access_token = data.access_token;
+              oauthPlaceholder.innerHTML = oauthTemplate({
+                access_token: access_token,
+                refresh_token: refresh_token
+              });
+            });
+          }, false);
+        }
+      })();
+    </script>
+  </body>
+</html>
+
